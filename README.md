@@ -108,7 +108,7 @@ A distributed contactless vital signs monitoring system using TI AWR1642 radar, 
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/YOUR_USERNAME/VitalFlow-Radar.git
+git clone https://github.com/ahmed100553/VitalFlow-Radar-Public
 cd VitalFlow-Radar
 ```
 
@@ -340,13 +340,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: Open a GitHub issue for bugs or feature requests
 - **Discussions**: Use GitHub Discussions for questions
-
-## 📚 Additional Resources
-
-- **Quick Start Guide**: [QUICK_START.md](QUICK_START.md)
-- **System Architecture**: See architecture diagram above
-- **Radar Configuration**: [vital_signs_awr1642.cfg](vital_signs_awr1642.cfg)
-
 ---
 
 **Built with ❤️ for contactless health monitoring**
