@@ -1,159 +1,355 @@
-# VitalFlow-Radar
+# VitalFlow-Radar 🫀📡
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi-red)
 ![Radar](https://img.shields.io/badge/Radar-AWR1642-blue)
 ![Streaming](https://img.shields.io/badge/Streaming-Confluent%20Kafka-000000)
 ![AI](https://img.shields.io/badge/AI-Vertex%20AI-4285F4)
-![Backend](https://img.shields.io/badge/Backend-FastAPI-009688)
-![Frontend](https://img.shields.io/badge/Frontend-React-61DAFB)
 
-**Cloud-Native Real-time Vital Signs Monitoring with mmWave Radar**
+> **🏆 Confluent Challenge Submission - Google Cloud x Confluent Hackathon**
+>
+> *Unleashing AI on Data in Motion: Real-Time Contactless Vital Signs Monitoring*
 
-A distributed contactless vital signs monitoring system using TI AWR1642 radar, Confluent Cloud Kafka streaming, Google Cloud Vertex AI, FastAPI backend, and React frontend. Designed for scalable deployment with edge processing and cloud analytics.
+**VitalFlow-Radar** is a next-generation healthcare application that combines **77GHz mmWave radar sensing**, **Confluent Cloud real-time streaming**, and **Vertex AI Gemini** to enable contactless vital signs monitoring at scale. The system demonstrates how real-time data streaming unlocks critical healthcare challenges—enabling hospitals to monitor multiple patients simultaneously without any physical contact.
 
 ![VitalFlow Dashboard](imgs/front-end.png)
 
-## 🌟 Features
+---
 
-- **Contactless Monitoring**: Heart rate and breathing rate detection using 77GHz mmWave radar
-- **Real-time Streaming**: Kafka-based data pipeline via Confluent Cloud
-- **AI-Powered Insights**: Vertex AI Gemini for anomaly detection and health summaries
-- **Edge Processing**: Complete DSP pipeline at edge for low latency
-- **Modern Dashboard**: React UI with real-time WebSocket updates
-- **Scalable Architecture**: Multiple edge devices → centralized cloud monitoring
-- **Alert System**: Intelligent anomaly detection with AI-generated recommendations
-- **Production Ready**: Deployed on Raspberry Pi with cloud backend
+## 🎯 Challenge Response
 
-## 🏗️ Architecture
+### The Problem We're Solving
+
+**Traditional vital signs monitoring** requires physical contact—pulse oximeters, ECG leads, chest straps. This creates:
+- **Infection risk** in hospital settings
+- **Discomfort** for long-term monitoring (sleep, pediatrics)
+- **Scalability limits** (1 nurse : 4-6 patients)
+- **Alert fatigue** from motion artifacts
+
+### Our Real-Time AI Solution
+
+VitalFlow-Radar streams **mmWave radar data** through Confluent Cloud to:
+
+1. **Detect heartbeats and breathing** through clothing, at distance (0.3-1.5m)
+2. **Process in real-time** using edge DSP + cloud AI
+3. **Predict anomalies** before they become critical
+4. **Scale to thousands of patients** with a single cloud backend
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         VitalFlow-Radar System                       │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  Edge Device (Raspberry Pi)                                          │
-│  ┌─────────────┐    ┌──────────────────────────────┐                │
-│  │   AWR1642   │───▶│  edge_producer_live.py       │                │
-│  │   Radar     │    │  - Range bin selection       │                │
-│  └─────────────┘    │  - DSP processing            │                │
-│                     │  - Vital signs extraction    │                │
-│                     └───────────┬──────────────────┘                │
-│                                 │                                    │
-│                                 ↓                                    │
-│                     ┌───────────────────────────────┐               │
-│                     │   Confluent Cloud (Kafka)     │               │
-│                     │   - vitalflow-radar-phase     │               │
-│                     │   - vitalflow-vital-signs     │               │
-│                     └───────────┬───────────────────┘               │
-│                                 │                                    │
-│                                 ↓                                    │
-│  Cloud Backend                                                       │
-│  ┌──────────────────────────────────────────────────────┐          │
-│  │  backend/main.py (FastAPI)                           │          │
-│  │  ┌─────────────────┐  ┌──────────────────────────┐  │          │
-│  │  │ Kafka Consumer  │  │  WebSocket Broadcast     │  │          │
-│  │  └─────────────────┘  └──────────────────────────┘  │          │
-│  │  ┌─────────────────┐  ┌──────────────────────────┐  │          │
-│  │  │ REST API        │  │  Vertex AI Integration   │  │          │
-│  │  └─────────────────┘  └──────────────────────────┘  │          │
-│  └──────────────────────────┬───────────────────────────┘          │
-│                             │                                       │
-│                             ↓                                       │
-│  ┌──────────────────────────────────────────────────────┐         │
-│  │        React Frontend (Vite + TypeScript)            │         │
-│  │        - Real-time vital signs display               │         │
-│  │        - AI health insights                          │         │
-│  │        - Alert history                               │         │
-│  └──────────────────────────────────────────────────────┘         │
-│                                                                     │
-└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
+│   EDGE DEVICE   │     │   CONFLUENT CLOUD    │     │   VERTEX AI         │
+│   AWR1642 Radar │────▶│   Apache Kafka       │────▶│   Gemini 1.5        │
+│                 │     │                      │     │                     │
+│ • 20 Hz sampling│     │ • vitalflow-phase    │     │ • Anomaly detection │
+│ • Range FFT     │     │ • vitalflow-vitals   │     │ • Health summaries  │
+│ • Phase extract │     │ • vitalflow-anomaly  │     │ • Predictive alerts │
+└─────────────────┘     └──────────────────────┘     └─────────────────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   REAL-TIME DASHBOARD │
+                    │   React + WebSocket   │
+                    │   Live vitals display │
+                    └──────────────────────┘
 ```
 
-## 📦 Tech Stack
+---
 
-### Edge (Producer)
-- **Python 3.11**: Edge processing runtime
-- **VitalSignsProcessor**: DSP algorithms (STFT, bandpass filters)
-- **Confluent Kafka**: Real-time data streaming
-- **AWR1642 Driver**: TI radar sensor interface
+## 🌟 Key Features
 
-### Backend (Consumer/API)
-- **FastAPI**: High-performance async Python framework
-- **Confluent Kafka**: Consumer for vital signs stream
-- **Vertex AI**: Gemini 1.5 Flash for AI insights
-- **WebSocket**: Real-time client communication
-- **SQLite**: Alerts and session storage
+### Real-Time Data Streaming with Confluent
 
-### Frontend
-- **React 18**: Modern UI with hooks
-- **TypeScript**: Type-safe JavaScript
-- **TailwindCSS**: Utility-first styling
-- **Recharts**: Responsive charts
-- **Vite**: Fast build tool
+| Feature | Implementation |
+|---------|----------------|
+| **High-Frequency Ingestion** | 20 Hz radar phase data → Kafka |
+| **Multi-Topic Architecture** | Phase data, vital signs, anomalies, alerts |
+| **Scalable Consumers** | Multiple dashboard instances, AI processors |
+| **Low Latency** | End-to-end <100ms radar → dashboard |
+
+### AI-Powered Insights with Vertex AI
+
+- **Gemini 1.5 Flash** for real-time health summaries
+- **Anomaly Detection**: Bradycardia, tachycardia, apnea, tachypnea
+- **Pediatric-Specific** algorithms (children have different normal ranges)
+- **Natural Language Alerts**: "Patient showing signs of respiratory distress"
+
+### Edge Processing
+
+- **FMCW Radar DSP**: Range FFT, MTI filtering, phase extraction
+- **Variance-Based Tracking**: Automatically finds the chest signal
+- **Motion Artifact Rejection**: Handles patient movement
+- **Low Power**: Runs on Raspberry Pi 4
+
+---
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### ⚡ Instant Demo (Hackathon Judges)
 
-1. **Sign up for free accounts:**
-   - [Confluent Cloud](https://www.confluent.io/confluent-cloud/tryfree/) - Kafka streaming
-   - [Google Cloud](https://cloud.google.com/free) - Vertex AI (optional)
+**No cloud credentials required!** Test the full system with one command:
 
-2. **Hardware (for radar operation):**
-   - TI AWR1642 mmWave Radar EVM
-   - Raspberry Pi 4 or equivalent Linux system
-
-### Setup
-
-1. **Clone the repository:**
 ```bash
-git clone https://github.com/ahmed100553/VitalFlow-Radar-Public
+git clone https://github.com/ahmed100553/VitalFlow-Radar.git
 cd VitalFlow-Radar
+
+# Make the demo script executable
+chmod +x scripts/start_demo.sh
+
+# Start everything (backend + frontend + demo traffic)
+./scripts/start_demo.sh
 ```
 
-2. **Configure environment:**
+Then open http://localhost:5173 and watch the live vital signs demo!
+
+- **Demo login**: `admin` / `admin123`
+- **API Docs**: http://localhost:8000/docs
+- **Demo scenarios**: Normal → Tachycardia → Apnea → Recovery
+
+---
+
+### Full Setup (With Confluent Cloud)
+
+#### Prerequisites
+
+1. **[Confluent Cloud Account](https://www.confluent.io/confluent-cloud/tryfree/)** (Free trial with code: `CONFLUENTDEV1`)
+2. **[Google Cloud Account](https://cloud.google.com/)** with Vertex AI enabled
+3. **Python 3.10+**
+4. **Node.js 18+** (for frontend)
+
+#### 1. Clone & Configure
+
 ```bash
+git clone https://github.com/ahmed100553/VitalFlow-Radar.git
+cd VitalFlow-Radar
+
+# Copy environment template
 cp .env.example .env
-# Edit .env with your Confluent Cloud and GCP credentials
 ```
 
-3. **Install dependencies:**
+Edit `.env` with your credentials:
+
+```bash
+# Confluent Cloud (Required for streaming)
+CONFLUENT_BOOTSTRAP_SERVERS=pkc-xxxxx.us-central1.gcp.confluent.cloud:9092
+CONFLUENT_API_KEY=your-api-key
+CONFLUENT_API_SECRET=your-api-secret
+
+# Google Cloud Vertex AI (Required for AI summaries)
+GOOGLE_CLOUD_PROJECT=your-project-id
+VERTEX_AI_LOCATION=us-central1
+
+# Optional: Schema Registry
+CONFLUENT_SCHEMA_REGISTRY_URL=https://psrc-xxxxx.us-central1.gcp.confluent.cloud
+```
+
+#### 2. Create Kafka Topics
+
+In Confluent Cloud Console, create these topics:
+
+| Topic Name | Partitions | Description |
+|------------|------------|-------------|
+| `vitalflow-radar-phase` | 6 | Raw phase data from radar |
+| `vitalflow-vital-signs` | 6 | Computed HR/BR |
+| `vitalflow-anomalies` | 3 | Detected anomalies |
+| `vitalflow-alerts` | 3 | Critical alerts |
+
+#### 3. Install Dependencies
+
 ```bash
 # Backend
 pip install -r requirements.txt
-cd backend && pip install -r requirements.txt && cd ..
+pip install -r backend/requirements.txt
 
 # Frontend
-cd frontend
-npm install
-cd ..
+cd frontend && npm install && cd ..
 ```
 
-4. **Start the system:**
-```bash
-# Development mode (starts both backend and frontend)
-chmod +x scripts/start_dev.sh
-./scripts/start_dev.sh
-```
+#### 4. Run the System
 
-5. **Access the dashboard:**
-   - Open http://localhost:5173
-   - Login with default credentials: `admin` / `admin123`
-
-### Production Deployment (Raspberry Pi)
+**Option A: With Kafka Traffic Generator (Recommended)**
 
 ```bash
-chmod +x scripts/setup_raspberry_pi.sh
-sudo ./scripts/setup_raspberry_pi.sh
+# Terminal 1: Start backend
+cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2: Start frontend  
+cd frontend && npm run dev
+
+# Terminal 3: Generate Kafka traffic
+python scripts/traffic_generator.py --scenario all
 ```
 
-### Docker Deployment
+**Option B: With Real Radar Hardware**
 
 ```bash
-cd docker
-docker-compose up -d
+# Terminal 1: Start backend
+cd backend && uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2: Start frontend
+cd frontend && npm run dev
+
+# Terminal 3: Run edge producer (connects to AWR1642)
+python edge_producer_live.py
 ```
+
+#### 5. Access Dashboard
+
+- **Frontend**: http://localhost:5173
+- **API Docs**: http://localhost:8000/docs
+- **Login**: `admin` / `admin123`
+
+---
+
+## 📊 Traffic Generator (Hackathon Demo)
+
+The traffic generator simulates realistic vital signs scenarios to demonstrate the system:
+
+```bash
+# Run all scenarios sequentially
+python scripts/traffic_generator.py --scenario all
+
+# Specific scenario
+python scripts/traffic_generator.py --scenario tachycardia
+
+# Multi-patient concurrent monitoring (scalability demo)
+python scripts/traffic_generator.py --multi-patient 5 --duration 120
+
+# Continuous demo mode for presentations
+python scripts/traffic_generator.py --continuous --duration 300
+```
+
+### Available Scenarios
+
+| Scenario | Description | Anomalies Generated |
+|----------|-------------|---------------------|
+| `normal` | Baseline healthy vitals | None |
+| `tachycardia` | Heart rate 75→140→85 BPM | Tachycardia alerts |
+| `bradycardia` | Heart rate drops to 42 BPM | Bradycardia alerts |
+| `apnea` | Breathing pause event | Apnea critical alerts |
+| `stress` | Elevated HR + BR | Warning alerts |
+| `sleep` | Low resting vitals | None |
+| `pediatric` | Child-appropriate higher HR | None (adjusted norms) |
+
+---
+
+## 🏗️ Architecture Deep Dive
+
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          VitalFlow-Radar Architecture                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────────┐                                                       │
+│  │   AWR1642 Radar  │  77GHz FMCW mmWave                                   │
+│  │   (TI EVM)       │  • 10 FPS frame rate                                 │
+│  └────────┬─────────┘  • 256 ADC samples                                   │
+│           │            • 16 chirps/frame                                    │
+│           ▼                                                                  │
+│  ┌──────────────────┐                                                       │
+│  │  Edge Producer   │  edge_producer_live.py                               │
+│  │  (Raspberry Pi)  │                                                       │
+│  │                  │  DSP Pipeline:                                        │
+│  │  • Range FFT     │  1. ADC → Range bins                                 │
+│  │  • MTI Filter    │  2. Remove static clutter                            │
+│  │  • Phase Extract │  3. Find chest bin (0.3-1.5m)                        │
+│  └────────┬─────────┘  4. Extract phase signal                             │
+│           │                                                                  │
+│           ▼                                                                  │
+│  ╔══════════════════════════════════════════════════════════════╗          │
+│  ║              CONFLUENT CLOUD (Apache Kafka)                   ║          │
+│  ║                                                               ║          │
+│  ║  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ ║          │
+│  ║  │ vitalflow-      │  │ vitalflow-      │  │ vitalflow-   │ ║          │
+│  ║  │ radar-phase     │  │ vital-signs     │  │ anomalies    │ ║          │
+│  ║  │                 │  │                 │  │              │ ║          │
+│  ║  │ 20 Hz raw data  │  │ HR/BR every 3s  │  │ AI-detected  │ ║          │
+│  ║  └─────────────────┘  └─────────────────┘  └──────────────┘ ║          │
+│  ╚══════════════════════════════════════════════════════════════╝          │
+│           │                      │                    │                     │
+│           ▼                      ▼                    ▼                     │
+│  ┌──────────────────┐   ┌──────────────────┐  ┌─────────────────┐         │
+│  │  Cloud Processor │   │   FastAPI        │  │   Vertex AI     │         │
+│  │                  │   │   Backend        │  │   Gemini 1.5    │         │
+│  │  • STFT analysis │   │                  │  │                 │         │
+│  │  • Vital compute │   │  • Kafka consume │  │  • Anomaly AI   │         │
+│  │  • Trend detect  │   │  • WebSocket     │  │  • Health sums  │         │
+│  └──────────────────┘   │  • REST API      │  │  • Predictions  │         │
+│                         └────────┬─────────┘  └─────────────────┘         │
+│                                  │                                         │
+│                                  ▼                                         │
+│                         ┌──────────────────┐                              │
+│                         │   React Frontend │                              │
+│                         │                  │                              │
+│                         │  • Real-time     │                              │
+│                         │    charts        │                              │
+│                         │  • AI insights   │                              │
+│                         │  • Alert history │                              │
+│                         └──────────────────┘                              │
+│                                                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Message Schemas
+
+**Phase Data (Edge → Cloud)**
+```json
+{
+  "timestamp": 1703260800.123,
+  "sequence": 42,
+  "phase": 0.0523,
+  "range_bin": 15,
+  "range_m": 0.66,
+  "signal_quality": 0.85,
+  "device_id": "radar-a1b2c3d4",
+  "patient_id": "patient-001"
+}
+```
+
+**Vital Signs (Processed)**
+```json
+{
+  "timestamp": 1703260830.456,
+  "heart_rate_bpm": 72.5,
+  "heart_rate_confidence": 0.89,
+  "breathing_rate_bpm": 14.2,
+  "breathing_rate_confidence": 0.85,
+  "device_id": "radar-a1b2c3d4",
+  "patient_id": "patient-001"
+}
+```
+
+**Anomaly Alert**
+```json
+{
+  "timestamp": 1703260860.789,
+  "anomaly_type": "tachycardia",
+  "severity": "medium",
+  "current_value": 112.3,
+  "normal_range_min": 60,
+  "normal_range_max": 100,
+  "description": "Elevated heart rate detected",
+  "recommended_action": "Monitor for sustained elevation",
+  "ai_summary": "Patient showing signs of elevated cardiac activity..."
+}
+```
+
+---
+
+## 🔧 Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Hardware** | TI AWR1642 | 77GHz FMCW mmWave radar |
+| **Edge** | Python, NumPy | DSP processing, Kafka producer |
+| **Streaming** | Confluent Cloud | Apache Kafka managed service |
+| **Backend** | FastAPI, WebSocket | REST API, real-time updates |
+| **AI** | Vertex AI Gemini | Anomaly detection, health summaries |
+| **Frontend** | React, TypeScript, TailwindCSS | Real-time dashboard |
+| **Database** | SQLite | Alerts, patient data |
+
+---
 
 ## 📁 Project Structure
 
@@ -161,185 +357,86 @@ docker-compose up -d
 VitalFlow-Radar/
 ├── backend/
 │   ├── main.py              # FastAPI application
-│   ├── requirements.txt     # Python dependencies
-│   └── data/                # SQLite database
+│   └── requirements.txt
 ├── frontend/
 │   ├── src/
 │   │   ├── components/      # React components
-│   │   ├── contexts/        # Auth & Vitals contexts
-│   │   ├── pages/           # Dashboard, Patients, Settings
-│   │   └── App.tsx          # Main application
-│   ├── package.json
-│   └── vite.config.ts
+│   │   ├── contexts/        # State management
+│   │   └── pages/           # Dashboard, Patients, Alerts
+│   └── package.json
 ├── scripts/
-│   ├── setup_raspberry_pi.sh  # Raspberry Pi setup
-│   ├── setup_ssl.sh           # SSL configuration
-│   └── start_dev.sh           # Development server
-├── docker/
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── nginx.conf
-├── awr1642_driver.py          # Radar driver (TLV parsing)
-├── vital_signs_processor.py   # DSP algorithms
-├── edge_producer_live.py      # Edge data producer
-├── confluent_config.py        # Kafka configuration
-├── vertex_ai_processor.py     # AI anomaly detection
-├── vital_signs_awr1642.cfg    # Radar configuration
-└── requirements.txt           # Core dependencies
+│   ├── traffic_generator.py # 🆕 Hackathon demo traffic
+│   ├── start_dev.sh         # Development server
+│   └── setup_raspberry_pi.sh
+├── awr1642_driver.py        # Radar TLV parser
+├── vital_signs_processor.py # DSP algorithms
+├── edge_producer_live.py    # Edge → Kafka streaming
+├── confluent_config.py      # Kafka configuration
+├── vertex_ai_processor.py   # AI anomaly detection
+└── vital_signs_awr1642.cfg  # Radar parameters
 ```
 
-## 🔌 API Endpoints
+---
 
-### REST API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | User authentication |
-| POST | `/api/auth/register` | User registration |
-| GET | `/api/patients` | List patients |
-| POST | `/api/patients` | Add patient |
-| GET | `/api/vitals/{id}/current` | Current vital signs |
-| GET | `/api/vitals/{id}/history` | Historical data (24h) |
-| GET | `/api/alerts` | List alerts |
-| GET | `/api/kafka/status` | Kafka connection status |
-| GET | `/api/vertex/status` | Vertex AI status |
-
-### WebSocket
-
-```javascript
-// Connect to real-time vital signs stream
-const ws = new WebSocket('ws://localhost:8000/ws/patient-001');
-
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log(`HR: ${data.heart_rate} BPM, BR: ${data.breathing_rate} BPM`);
-};
-```
-
-**API Documentation:** http://localhost:8000/api/docs (Swagger UI)
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-Create a `.env` file from `.env.example`:
+## 🧪 Running Tests
 
 ```bash
-# Confluent Cloud (Required for streaming)
-CONFLUENT_BOOTSTRAP_SERVERS=your-server.confluent.cloud:9092
-CONFLUENT_API_KEY=your-api-key
-CONFLUENT_API_SECRET=your-api-secret
+# Test Confluent connectivity
+python -c "from confluent_config import print_config_status; print_config_status()"
 
-# Google Cloud (Optional for AI features)
-GOOGLE_CLOUD_PROJECT=your-gcp-project-id
-VERTEX_AI_LOCATION=us-central1
+# Test Vertex AI
+python -c "from vertex_ai_processor import VitalSignsAnomalyDetector; d = VitalSignsAnomalyDetector(); d.initialize(); print('✅ Vertex AI ready')"
 
-# Application Settings
-DEVICE_ID=radar-001
-RADAR_FPS=10
-ANALYSIS_WINDOW_SEC=30
+# Run traffic generator (tests full pipeline)
+python scripts/traffic_generator.py --scenario normal
 ```
 
-### Radar Configuration
+---
 
-The `vital_signs_awr1642.cfg` file is optimized for vital signs monitoring:
+## 📈 Performance Metrics
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Frame Rate | 10 FPS | 100ms frame period |
-| Range Resolution | 0.044m | Per range bin |
-| ADC Samples | 256 | Per chirp |
-| Chirps/Frame | 16 | For integration |
-| Expected Range | 0.3-1.5m | Subject distance |
+| Metric | Value |
+|--------|-------|
+| **End-to-End Latency** | <100ms |
+| **Frame Rate** | 10-20 FPS |
+| **Heart Rate Accuracy** | ±2 BPM (vs reference) |
+| **Breathing Rate Accuracy** | ±1 BPM |
+| **Effective Range** | 0.3 - 1.5m |
+| **Kafka Throughput** | 1000+ messages/sec |
 
-## ⚙️ Hardware Setup
+---
 
-**Connect TI AWR1642 EVM to Raspberry Pi:**
-- **CLI Port**: `/dev/ttyACM0` (configuration)
-- **Data Port**: `/dev/ttyACM1` (data stream)
+## 🎥 Video Demo
 
-```bash
-# Add user to dialout group
-sudo usermod -a -G dialout $USER
-# Log out and back in
+[Watch the 3-minute demo walkthrough](#) *(link to be added)*
 
-# Test connection
-python example_awr1642_usage.py --simple
-```
+---
 
-## 📊 Signal Processing Pipeline
+## 📚 Resources
 
-The DSP pipeline implements research-validated algorithms:
+- [Confluent Cloud Documentation](https://docs.confluent.io/cloud/current/)
+- [Vertex AI Documentation](https://cloud.google.com/vertex-ai/docs)
+- [TI AWR1642 mmWave Radar](https://www.ti.com/tool/AWR1642BOOST)
+- [Build AI with Confluent](https://docs.confluent.io/cloud/current/ai/overview.html)
 
-1. **Range FFT**: Transform ADC samples to range domain
-2. **MTI Filter**: Remove static clutter with exponential moving average
-3. **Range Bin Selection**: Variance-based optimal bin (0.3-1.5m)
-4. **Phase Extraction**: Unwrap, detrend, and smooth phase signal
-5. **Band-pass Filtering**: Separate breathing (0.1-0.5 Hz) and cardiac (0.9-2.3 Hz) bands
-6. **STFT Ridge Tracking**: Time-varying frequency estimation
-
-## 💻 Usage Examples
-
-### Python API
-
-```python
-from vital_signs_processor import VitalSignsProcessor
-
-# Initialize processor
-processor = VitalSignsProcessor(fps=10.0)
-
-# Process phase signal
-result = processor.extract_vital_signs(phase_signal)
-
-print(f"Heart Rate: {result['hr_bpm']:.1f} BPM")
-print(f"Breathing Rate: {result['br_bpm']:.1f} BPM")
-```
-
-### Command Line
-
-```bash
-# Real-time monitoring
-python vital_signs_monitor.py --live --duration 60
-
-# With live visualization
-python vital_signs_monitor.py --live --plot --duration 120
-
-# Edge producer (streams to Confluent Cloud)
-python edge_producer_live.py
-```
-
-## 📈 Performance
-
-- **Latency**: <100ms end-to-end (radar → cloud → dashboard)
-- **Accuracy**: ±2 BPM heart rate, ±1 BPM breathing rate (vs. reference)
-- **Range**: 0.3-1.5m optimal, up to 3m detectable
-- **Throughput**: 10 frames/sec, ~1KB/frame
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
+
+---
 
 ## 🙏 Acknowledgments
 
-- **Texas Instruments** for AWR1642 mmWave SDK
-- **Confluent** for Kafka streaming platform
+- **Confluent** for the streaming platform and hackathon challenge
 - **Google Cloud** for Vertex AI and Gemini
-- Research papers on mmWave vital signs monitoring
+- **Texas Instruments** for AWR1642 mmWave SDK
 
-## 📞 Support
-
-- **Issues**: Open a GitHub issue for bugs or feature requests
-- **Discussions**: Use GitHub Discussions for questions
 ---
 
-**Built with ❤️ for contactless health monitoring**
+<p align="center">
+  <b>Built with ❤️ for the Google Cloud x Confluent Hackathon</b>
+  <br>
+  <i>Real-time AI on Data in Motion for Healthcare</i>
+</p>

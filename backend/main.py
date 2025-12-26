@@ -1558,6 +1558,121 @@ async def health_check():
         }
     }
 
+
+# === DEMO ENDPOINTS (For hackathon judges - no auth required) ===
+
+class DemoVitalSigns(BaseModel):
+    """Model for demo vital signs injection."""
+    patient_id: str = "default"
+    heart_rate: float
+    heart_rate_confidence: float = 0.85
+    breathing_rate: float
+    breathing_rate_confidence: float = 0.82
+    status: str = "normal"
+    timestamp: Optional[float] = None
+    alerts: List[dict] = []
+
+
+@app.post("/api/demo/vitals")
+async def inject_demo_vitals(data: DemoVitalSigns):
+    """
+    Inject demo vital signs directly into the system.
+    
+    This endpoint allows hackathon judges to test the dashboard without 
+    requiring Kafka or radar setup. Use with the demo_traffic_http.py script.
+    
+    Example:
+        curl -X POST http://localhost:8000/api/demo/vitals \
+          -H "Content-Type: application/json" \
+          -d '{"patient_id":"default","heart_rate":75,"breathing_rate":14}'
+    """
+    # Create vital signs data
+    vital_data = VitalSignsData(
+        patient_id=data.patient_id,
+        heart_rate=round(data.heart_rate, 1),
+        heart_rate_confidence=round(data.heart_rate_confidence, 2),
+        breathing_rate=round(data.breathing_rate, 1),
+        breathing_rate_confidence=round(data.breathing_rate_confidence, 2),
+        status=data.status,
+        timestamp=data.timestamp or time.time(),
+        alerts=data.alerts
+    )
+    
+    # Re-evaluate status based on actual values
+    hr, br = vital_data.heart_rate, vital_data.breathing_rate
+    if hr < settings.HR_MIN or hr > settings.HR_MAX:
+        vital_data.status = 'critical'
+        vital_data.alerts.append({
+            'type': 'heart_rate',
+            'severity': 'critical',
+            'message': f'Heart rate {hr:.0f} BPM is out of normal range'
+        })
+    elif br < settings.BR_MIN or br > settings.BR_MAX:
+        vital_data.status = 'warning'
+        vital_data.alerts.append({
+            'type': 'breathing_rate',
+            'severity': 'warning',
+            'message': f'Breathing rate {br:.0f}/min is unusual'
+        })
+    
+    # Update internal state
+    vital_service.current_data[data.patient_id] = vital_data
+    
+    # Add to history buffer (create if doesn't exist)
+    if data.patient_id not in vital_service.data_buffer:
+        vital_service.data_buffer[data.patient_id] = deque(maxlen=3600)
+    vital_service.data_buffer[data.patient_id].append(vital_data)
+    
+    # Broadcast to WebSocket clients
+    await manager.broadcast(data.patient_id, vital_data.dict())
+    
+    # Produce to Kafka if connected
+    if kafka_service.is_connected:
+        kafka_service.produce_vital_signs(vital_data.dict(), data.patient_id)
+    
+    return {
+        "status": "injected",
+        "vital_signs": vital_data.dict(),
+        "broadcast": True,
+        "kafka_sent": kafka_service.is_connected
+    }
+
+
+@app.get("/api/demo/scenarios")
+async def get_demo_scenarios():
+    """List available demo scenarios for testing."""
+    return {
+        "scenarios": [
+            {
+                "name": "normal",
+                "description": "Normal healthy vital signs - HR ~72, BR ~14"
+            },
+            {
+                "name": "tachycardia", 
+                "description": "Elevated heart rate episode - HR rises to 130+ BPM"
+            },
+            {
+                "name": "bradycardia",
+                "description": "Low heart rate episode - HR drops to 45 BPM"
+            },
+            {
+                "name": "apnea",
+                "description": "Breathing pause event - BR drops to 5/min"
+            },
+            {
+                "name": "stress",
+                "description": "Stress response - elevated and variable HR/BR"
+            },
+            {
+                "name": "all",
+                "description": "Cycle through all scenarios sequentially"
+            }
+        ],
+        "usage": "Run: python scripts/demo_traffic_http.py --scenario <name>",
+        "docs": "See docs/QUICK_START.md for full instructions"
+    }
+
+
 # === RADAR ENDPOINTS ===
 
 @app.get("/api/radar/status")
@@ -1816,6 +1931,133 @@ async def acknowledge_alert(alert_id: str, user: dict = Depends(get_current_user
         )
         await db.commit()
     return {"message": "Alert acknowledged"}
+
+@app.get("/api/alerts/stats")
+async def get_alert_stats(user: dict = Depends(get_current_user)):
+    """Get alert statistics."""
+    async with aiosqlite.connect(settings.DATABASE_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        
+        # Total alerts
+        cursor = await db.execute('SELECT COUNT(*) as total FROM alerts')
+        total_row = await cursor.fetchone()
+        total = total_row['total'] if total_row else 0
+        
+        # Acknowledged
+        cursor = await db.execute('SELECT COUNT(*) as count FROM alerts WHERE acknowledged = 1')
+        ack_row = await cursor.fetchone()
+        acknowledged = ack_row['count'] if ack_row else 0
+        
+        # By severity (unacknowledged only)
+        cursor = await db.execute(
+            'SELECT severity, COUNT(*) as count FROM alerts WHERE acknowledged = 0 GROUP BY severity'
+        )
+        severity_rows = await cursor.fetchall()
+        by_severity = {"critical": 0, "warning": 0}
+        for row in severity_rows:
+            sev = row['severity']
+            if sev in by_severity:
+                by_severity[sev] = row['count']
+        
+        # By type
+        cursor = await db.execute(
+            'SELECT alert_type, COUNT(*) as count FROM alerts GROUP BY alert_type'
+        )
+        type_rows = await cursor.fetchall()
+        by_type = {row['alert_type']: row['count'] for row in type_rows}
+        
+        return {
+            "total_alerts": total,
+            "acknowledged": acknowledged,
+            "unacknowledged": total - acknowledged,
+            "by_severity": by_severity,
+            "by_type": by_type
+        }
+
+@app.post("/api/alerts/trigger/{anomaly_type}")
+async def trigger_anomaly(
+    anomaly_type: str,
+    duration: int = Query(30, ge=10, le=120),
+    patient_id: str = Query("default"),
+    user: dict = Depends(get_current_user)
+):
+    """Trigger a simulated anomaly for demo purposes.
+    
+    Available types: tachycardia, bradycardia, apnea, tachypnea, stress
+    """
+    valid_types = ["tachycardia", "bradycardia", "apnea", "tachypnea", "stress"]
+    if anomaly_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid anomaly type. Valid types: {', '.join(valid_types)}"
+        )
+    
+    # Generate alert based on anomaly type
+    anomaly_configs = {
+        "tachycardia": {
+            "severity": "critical",
+            "message": "High heart rate detected (simulated): >100 BPM",
+            "vital_snapshot": {"heart_rate": 115, "breathing_rate": 16}
+        },
+        "bradycardia": {
+            "severity": "critical",
+            "message": "Low heart rate detected (simulated): <60 BPM",
+            "vital_snapshot": {"heart_rate": 45, "breathing_rate": 14}
+        },
+        "apnea": {
+            "severity": "critical",
+            "message": "Breathing irregularity detected (simulated): <8 breaths/min",
+            "vital_snapshot": {"heart_rate": 68, "breathing_rate": 6}
+        },
+        "tachypnea": {
+            "severity": "warning",
+            "message": "Rapid breathing detected (simulated): >20 breaths/min",
+            "vital_snapshot": {"heart_rate": 82, "breathing_rate": 28}
+        },
+        "stress": {
+            "severity": "warning",
+            "message": "Elevated stress indicators detected (simulated)",
+            "vital_snapshot": {"heart_rate": 95, "breathing_rate": 22}
+        }
+    }
+    
+    config = anomaly_configs[anomaly_type]
+    alert_id = f"demo-{anomaly_type}-{int(time.time())}"
+    
+    # Insert into database
+    async with aiosqlite.connect(settings.DATABASE_PATH) as db:
+        await db.execute(
+            '''INSERT INTO alerts (id, patient_id, timestamp, alert_type, severity, message, acknowledged)
+               VALUES (?, ?, ?, ?, ?, ?, 0)''',
+            (alert_id, patient_id, time.time(), anomaly_type, config["severity"], config["message"])
+        )
+        await db.commit()
+    
+    # Stream to Kafka if available
+    if KAFKA_AVAILABLE and vital_service.kafka_producer:
+        try:
+            vital_service.kafka_producer.produce(
+                TOPICS.get('anomalies', 'vitalflow-anomalies'),
+                key=patient_id.encode('utf-8'),
+                value=json.dumps({
+                    "type": anomaly_type,
+                    "severity": config["severity"],
+                    "patient_id": patient_id,
+                    "vital_snapshot": config["vital_snapshot"],
+                    "timestamp": time.time()
+                }).encode('utf-8')
+            )
+            vital_service.kafka_producer.flush()
+        except Exception as e:
+            logging.warning(f"Failed to stream anomaly to Kafka: {e}")
+    
+    return {
+        "status": "triggered",
+        "anomaly_type": anomaly_type,
+        "duration": duration,
+        "alert_id": alert_id,
+        "message": f"Anomaly '{anomaly_type}' triggered for {duration} seconds"
+    }
 
 # Monitoring control
 @app.post("/api/monitoring/start/{patient_id}")

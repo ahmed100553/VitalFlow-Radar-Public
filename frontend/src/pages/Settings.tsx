@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Wifi, Bell, Shield, Server, Radio, RefreshCw, Cloud, Brain, Zap } from 'lucide-react'
+import { Wifi, Bell, Shield, Server, Radio, RefreshCw, Cloud, Brain, Zap, AlertTriangle, Play } from 'lucide-react'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
 import { useVitals } from '../contexts/VitalsContext'
@@ -14,6 +14,8 @@ export default function Settings() {
   const [connecting, setConnecting] = useState(false)
   const [connectingKafka, setConnectingKafka] = useState(false)
   const [initializingAI, setInitializingAI] = useState(false)
+  const [triggeringAnomaly, setTriggeringAnomaly] = useState<string | null>(null)
+  const [alertStats, setAlertStats] = useState<any>(null)
 
   const fetchHealth = async () => {
     try {
@@ -24,9 +26,22 @@ export default function Settings() {
     }
   }
 
+  const fetchAlertStats = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/alerts/stats`)
+      setAlertStats(response.data)
+    } catch (error) {
+      console.error('Failed to fetch alert stats:', error)
+    }
+  }
+
   useEffect(() => {
     fetchHealth()
-    const interval = setInterval(fetchHealth, 10000)
+    fetchAlertStats()
+    const interval = setInterval(() => {
+      fetchHealth()
+      fetchAlertStats()
+    }, 10000)
     return () => clearInterval(interval)
   }, [])
 
@@ -72,6 +87,19 @@ export default function Settings() {
       console.error('Failed to initialize Vertex AI:', error)
     }
     setInitializingAI(false)
+  }
+
+  const handleTriggerAnomaly = async (anomalyType: string) => {
+    setTriggeringAnomaly(anomalyType)
+    try {
+      await axios.post(`${API_URL}/api/alerts/trigger/${anomalyType}`)
+      // Refresh stats after triggering
+      await fetchAlertStats()
+      await fetchHealth()
+    } catch (error) {
+      console.error('Failed to trigger anomaly:', error)
+    }
+    setTriggeringAnomaly(null)
   }
 
   const radarStatus = health?.integrations?.radar || health?.radar || {}
@@ -208,7 +236,7 @@ export default function Settings() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-slate-800/50 rounded-xl p-4">
               <p className="text-gray-400 text-sm mb-1">Status</p>
               <p className={clsx(
@@ -230,13 +258,13 @@ export default function Settings() {
             </div>
             
             <div className="bg-slate-800/50 rounded-xl p-4">
-              <p className="text-gray-400 text-sm mb-1">Messages Sent</p>
-              <p className="font-mono text-lg">{kafkaStatus.stats?.sent || 0}</p>
+              <p className="text-gray-400 text-sm mb-1">Messages Streamed</p>
+              <p className="font-mono text-lg text-blue-400">{kafkaStatus.stats?.sent || 0}</p>
             </div>
             
             <div className="bg-slate-800/50 rounded-xl p-4">
-              <p className="text-gray-400 text-sm mb-1">Delivered</p>
-              <p className="font-mono text-lg text-green-400">{kafkaStatus.stats?.delivered || 0}</p>
+              <p className="text-gray-400 text-sm mb-1">Msg/sec</p>
+              <p className="font-mono text-lg text-green-400">{kafkaStatus.stats?.messages_per_second || 0}</p>
             </div>
           </div>
 
@@ -490,6 +518,115 @@ export default function Settings() {
             </label>
           </div>
         </div>
+      </div>
+
+      {/* Demo Controls Section */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-orange-500/20">
+            <AlertTriangle className="w-6 h-6 text-orange-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Demo Controls</h2>
+            <p className="text-sm text-gray-400">Trigger simulated anomalies for testing the alert system</p>
+          </div>
+        </div>
+
+        {/* Alert Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div className="bg-slate-800/50 rounded-xl p-4">
+            <p className="text-gray-400 text-xs">Total Alerts</p>
+            <p className="text-2xl font-bold text-white">{alertStats?.total_alerts || 0}</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-xl p-4">
+            <p className="text-gray-400 text-xs">Critical</p>
+            <p className="text-2xl font-bold text-red-400">{alertStats?.by_severity?.critical || 0}</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-xl p-4">
+            <p className="text-gray-400 text-xs">Warnings</p>
+            <p className="text-2xl font-bold text-yellow-400">{alertStats?.by_severity?.warning || 0}</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-xl p-4">
+            <p className="text-gray-400 text-xs">Acknowledged</p>
+            <p className="text-2xl font-bold text-green-400">{alertStats?.acknowledged || 0}</p>
+          </div>
+        </div>
+
+        {/* Anomaly Trigger Buttons */}
+        <div className="space-y-3">
+          <p className="text-sm text-gray-400 mb-2">Click to simulate an anomaly (alerts auto-generated):</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <button
+              onClick={() => handleTriggerAnomaly('tachycardia')}
+              disabled={triggeringAnomaly !== null}
+              className={clsx(
+                'flex flex-col items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all',
+                'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30',
+                triggeringAnomaly === 'tachycardia' && 'animate-pulse'
+              )}
+            >
+              <Play className={clsx('w-5 h-5', triggeringAnomaly === 'tachycardia' && 'animate-spin')} />
+              <span className="text-xs">Tachycardia</span>
+              <span className="text-[10px] text-gray-400">HR &gt; 100</span>
+            </button>
+            <button
+              onClick={() => handleTriggerAnomaly('bradycardia')}
+              disabled={triggeringAnomaly !== null}
+              className={clsx(
+                'flex flex-col items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all',
+                'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30',
+                triggeringAnomaly === 'bradycardia' && 'animate-pulse'
+              )}
+            >
+              <Play className={clsx('w-5 h-5', triggeringAnomaly === 'bradycardia' && 'animate-spin')} />
+              <span className="text-xs">Bradycardia</span>
+              <span className="text-[10px] text-gray-400">HR &lt; 60</span>
+            </button>
+            <button
+              onClick={() => handleTriggerAnomaly('apnea')}
+              disabled={triggeringAnomaly !== null}
+              className={clsx(
+                'flex flex-col items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all',
+                'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/30',
+                triggeringAnomaly === 'apnea' && 'animate-pulse'
+              )}
+            >
+              <Play className={clsx('w-5 h-5', triggeringAnomaly === 'apnea' && 'animate-spin')} />
+              <span className="text-xs">Apnea</span>
+              <span className="text-[10px] text-gray-400">BR &lt; 8</span>
+            </button>
+            <button
+              onClick={() => handleTriggerAnomaly('tachypnea')}
+              disabled={triggeringAnomaly !== null}
+              className={clsx(
+                'flex flex-col items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all',
+                'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30',
+                triggeringAnomaly === 'tachypnea' && 'animate-pulse'
+              )}
+            >
+              <Play className={clsx('w-5 h-5', triggeringAnomaly === 'tachypnea' && 'animate-spin')} />
+              <span className="text-xs">Tachypnea</span>
+              <span className="text-[10px] text-gray-400">BR &gt; 20</span>
+            </button>
+            <button
+              onClick={() => handleTriggerAnomaly('stress')}
+              disabled={triggeringAnomaly !== null}
+              className={clsx(
+                'flex flex-col items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all',
+                'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/30',
+                triggeringAnomaly === 'stress' && 'animate-pulse'
+              )}
+            >
+              <Play className={clsx('w-5 h-5', triggeringAnomaly === 'stress' && 'animate-spin')} />
+              <span className="text-xs">Stress</span>
+              <span className="text-[10px] text-gray-400">High HRV</span>
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          Anomalies trigger real alerts that are streamed through Confluent Cloud Kafka and processed by Vertex AI.
+        </p>
       </div>
 
       {/* About Section */}

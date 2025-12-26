@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useVitals } from '../contexts/VitalsContext'
-import { Heart, Wind, Activity, AlertTriangle, TrendingUp, Clock, Radio, Brain, Sparkles } from 'lucide-react'
+import { Heart, Wind, Activity, AlertTriangle, TrendingUp, Clock, Radio, Brain, Sparkles, Zap, ArrowUpRight } from 'lucide-react'
 import {
   XAxis,
   YAxis,
@@ -204,6 +204,8 @@ export default function Dashboard() {
   const [monitoringMode, setMonitoringMode] = useState<string>('unknown')
   const [healthSummary, setHealthSummary] = useState<any>(null)
   const [integrations, setIntegrations] = useState<any>({})
+  const [streamingStats, setStreamingStats] = useState<any>(null)
+  const [alertStats, setAlertStats] = useState<any>(null)
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -211,12 +213,22 @@ export default function Dashboard() {
         const response = await axios.get(`${API_URL}/api/health`)
         setMonitoringMode(response.data.monitoring_mode || 'simulation')
         setIntegrations(response.data.integrations || {})
+        
+        // Extract streaming stats from kafka integration
+        if (response.data.integrations?.kafka?.stats) {
+          setStreamingStats(response.data.integrations.kafka.stats)
+        }
+        
+        // Extract alert stats
+        if (response.data.alerts) {
+          setAlertStats(response.data.alerts)
+        }
       } catch (error) {
         console.error('Failed to fetch mode:', error)
       }
     }
     fetchStatus()
-    const interval = setInterval(fetchStatus, 30000)
+    const interval = setInterval(fetchStatus, 5000) // More frequent updates for streaming
     return () => clearInterval(interval)
   }, [])
 
@@ -440,6 +452,80 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Confluent Cloud Streaming Status */}
+      {integrations.kafka?.connected && (
+        <div className="glass rounded-2xl p-6 border border-blue-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <Zap className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Confluent Cloud Streaming</h2>
+                <p className="text-xs text-gray-500">Real-time data pipeline</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <span className="text-xs text-green-400">Live</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-800/50 rounded-xl p-3">
+              <p className="text-gray-500 text-xs">Messages Streamed</p>
+              <p className="text-2xl font-bold text-blue-400">
+                {streamingStats?.sent || 0}
+              </p>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-3">
+              <p className="text-gray-500 text-xs">Throughput</p>
+              <p className="text-2xl font-bold text-cyan-400">
+                {(streamingStats?.messages_per_second || 0).toFixed(1)}
+                <span className="text-xs text-gray-500 ml-1">/sec</span>
+              </p>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-3">
+              <p className="text-gray-500 text-xs">Active Alerts</p>
+              <p className="text-2xl font-bold text-yellow-400">
+                {alertStats?.unacknowledged || 0}
+              </p>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-3">
+              <p className="text-gray-500 text-xs">Critical</p>
+              <p className="text-2xl font-bold text-red-400">
+                {alertStats?.by_severity?.critical || 0}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                vitalflow-vital-signs
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                vitalflow-alerts
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                vitalflow-anomalies
+              </span>
+            </div>
+            <a 
+              href="https://confluent.cloud" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
+            >
+              Confluent Cloud <ArrowUpRight className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* AI Health Summary */}
       {healthSummary && (

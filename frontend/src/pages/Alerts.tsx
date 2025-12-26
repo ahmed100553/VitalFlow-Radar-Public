@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react'
+import { Bell, CheckCircle, AlertTriangle, XCircle, Clock, Zap } from 'lucide-react'
 import axios from 'axios'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -12,6 +12,10 @@ interface Alert {
   severity: string
   message: string
   acknowledged: boolean
+  vital_snapshot?: {
+    heart_rate: number
+    breathing_rate: number
+  }
 }
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -20,6 +24,7 @@ export default function Alerts() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'critical' | 'warning'>('all')
+  const [streamingConnected, setStreamingConnected] = useState(false)
 
   const fetchAlerts = async () => {
     try {
@@ -27,6 +32,12 @@ export default function Alerts() {
       // Handle both array and {alerts: []} response formats
       const data = Array.isArray(response.data) ? response.data : (response.data.alerts || [])
       setAlerts(data)
+      
+      // Also check streaming status
+      try {
+        const healthRes = await axios.get(`${API_URL}/api/health`)
+        setStreamingConnected(healthRes.data.integrations?.kafka?.connected || false)
+      } catch {}
     } catch (error) {
       console.error('Failed to fetch alerts:', error)
       // Set demo alerts on error for demo mode
@@ -41,7 +52,7 @@ export default function Alerts() {
 
   useEffect(() => {
     fetchAlerts()
-    const interval = setInterval(fetchAlerts, 10000) // Refresh every 10 seconds
+    const interval = setInterval(fetchAlerts, 5000) // Refresh every 5 seconds for real-time alerts
     return () => clearInterval(interval)
   }, [])
 
@@ -72,9 +83,18 @@ export default function Alerts() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Alerts</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold">Alerts</h1>
+            {streamingConnected && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
+                <Zap className="w-3 h-3" />
+                Streaming
+              </div>
+            )}
+          </div>
           <p className="text-gray-400 mt-1">
             {alerts.length} unacknowledged alert{alerts.length !== 1 ? 's' : ''}
+            {streamingConnected && ' • Real-time via Confluent Cloud'}
           </p>
         </div>
 
@@ -157,6 +177,12 @@ export default function Alerts() {
                         })}
                       </span>
                       <span>Patient: {alert.patient_id}</span>
+                      {alert.vital_snapshot && (
+                        <span className="flex items-center gap-2 text-gray-400">
+                          <span>HR: {alert.vital_snapshot.heart_rate?.toFixed(0) || '--'}</span>
+                          <span>BR: {alert.vital_snapshot.breathing_rate?.toFixed(0) || '--'}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

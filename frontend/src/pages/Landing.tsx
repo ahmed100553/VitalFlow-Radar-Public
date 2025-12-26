@@ -516,7 +516,7 @@ function CallToAction() {
             <ArrowRight className="w-5 h-5" />
           </Link>
           <a 
-            href="https://github.com/ahmed100553/VitalFlow-Radar"
+            href="https://github.com/ahmed100553/VitalFlow-Radar-Public"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 text-white px-8 py-4 rounded-xl font-semibold transition-all border border-white/20"
@@ -546,7 +546,7 @@ function Footer() {
               and AI. Making healthcare safer and more comfortable.
             </p>
             <div className="flex gap-4">
-              <a href="https://github.com/ahmed100553/VitalFlow-Radar" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+              <a href="https://github.com/ahmed100553/VitalFlow-Radar-Public" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                 GitHub
               </a>
             </div>
@@ -565,8 +565,8 @@ function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Resources</h4>
             <ul className="space-y-2">
-              <li><a href="https://github.com/ahmed100553/VitalFlow-Radar" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a></li>
-              <li><a href="https://github.com/ahmed100553/VitalFlow-Radar" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API Reference</a></li>
+              <li><a href="https://github.com/ahmed100553/VitalFlow-Radar-Public" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a></li>
+              <li><a href="https://github.com/ahmed100553/VitalFlow-Radar-Public" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API Reference</a></li>
               <li><a href="mailto:support@vitalflow.com" className="hover:text-white transition-colors">Support</a></li>
               <li><a href="mailto:contact@vitalflow.com" className="hover:text-white transition-colors">Contact</a></li>
             </ul>
