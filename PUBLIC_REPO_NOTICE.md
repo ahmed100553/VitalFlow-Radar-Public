@@ -32,10 +32,6 @@ Before running this project, you need to set up your own credentials:
 ❌ Private development notes  
 ❌ Internal business documentation  
 
-### Getting Started
-1. Read [QUICK_START.md](QUICK_START.md) for setup instructions
-2. Review [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system overview
-3. Follow phase-by-phase guides in the `docs/` folder
 
 ### Support
 For questions or issues, please open a GitHub issue or contact the maintainers.
