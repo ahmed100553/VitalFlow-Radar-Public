@@ -1,0 +1,13 @@
+numpy
+pandas
+scipy
+confluent-kafka>=2.3.0
+pywavelets
+google-cloud-aiplatform>=1.38.0
+vertexai>=1.38.0
+pyserial
+matplotlib
+plotly
+pyqtgraph
+python-dotenv
+streamlit>=1.29.0

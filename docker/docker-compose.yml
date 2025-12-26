@@ -1,0 +1,34 @@
+#===============================================================================
+# VitalFlow-Radar: Docker Compose Configuration
+#===============================================================================
+
+services:
+  vitalflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: vitalflow
+    ports:
+      - "80:80"
+    volumes:
+      - vitalflow_data:/var/lib/vitalflow
+      - vitalflow_logs:/var/log/vitalflow
+    environment:
+      - VITALFLOW_SECRET_KEY=${VITALFLOW_SECRET_KEY:-change-me-in-production}
+      - VITALFLOW_DB=/var/lib/vitalflow/vitalflow.db
+    devices:
+      # Uncomment for real radar hardware
+      # - /dev/ttyUSB0:/dev/ttyUSB0
+      # - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/null:/dev/null
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  vitalflow_data:
+  vitalflow_logs:

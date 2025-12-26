@@ -1,0 +1,54 @@
+MIT License
+
+Copyright (c) 2025 VitalFlow-Radar Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Third-Party Licenses
+
+This project uses the following open-source libraries and services:
+
+### Backend Dependencies
+- **FastAPI** - MIT License
+- **Confluent Kafka Python** - Apache License 2.0
+- **Google Cloud AI Platform** - Apache License 2.0
+- **NumPy** - BSD License
+- **Pandas** - BSD License
+
+### Frontend Dependencies
+- **React** - MIT License
+- **Vite** - MIT License
+- **TailwindCSS** - MIT License
+- **Recharts** - MIT License
+- **Lucide React** - ISC License
+
+### Hardware/Firmware
+This project interfaces with **Texas Instruments AWR1642 Radar**, which has separate licensing terms for its SDK and firmware. Please refer to TI's licensing documentation.
+
+### Data Services
+- **Confluent Cloud** - Subject to Confluent Cloud Terms of Service
+- **Google Cloud Platform** - Subject to Google Cloud Terms of Service
+
+---
+
+For the full list of dependencies and their licenses, see:
+- Backend: `requirements.txt`
+- Frontend: `package.json`

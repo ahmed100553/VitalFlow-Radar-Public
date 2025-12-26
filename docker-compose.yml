@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  vitalflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vitalflow-radar
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - vitalflow_data:/data
+      - vitalflow_logs:/logs
+      # Mount radar device if connected
+      - /dev:/dev
+    devices:
+      # AWR1642 serial ports
+      - /dev/ttyACM0:/dev/ttyACM0
+      - /dev/ttyACM1:/dev/ttyACM1
+    privileged: true  # Required for serial port access
+    environment:
+      - VITALFLOW_SECRET_KEY=${VITALFLOW_SECRET_KEY:-changeme}
+      - VITALFLOW_ADMIN_PASSWORD=${VITALFLOW_ADMIN_PASSWORD:-admin123}
+      - VITALFLOW_PORT=8080
+      - RADAR_FPS=10
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Nginx reverse proxy for SSL
+  nginx:
+    image: nginx:alpine
+    container_name: vitalflow-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./production/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - vitalflow
+    profiles:
+      - production
+
+volumes:
+  vitalflow_data:
+    driver: local
+  vitalflow_logs:
+    driver: local
