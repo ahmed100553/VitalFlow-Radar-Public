@@ -276,4 +276,3 @@ Rawdata/
 node_modules/
 .vite/
 *.db
-.github/workflows/
