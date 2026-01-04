@@ -408,7 +408,7 @@ python scripts/traffic_generator.py --scenario normal
 
 ## 🎥 Video Demo
 
-[Watch the demo walkthrough](https://youtu.be/wP1_eyVGeQI)
+[Watch the 3-minute demo walkthrough](#) *(link to be added)*
 
 ---
 

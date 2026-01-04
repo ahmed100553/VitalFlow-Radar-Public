@@ -28,13 +28,27 @@ interface VitalsContextType {
 const VitalsContext = createContext<VitalsContextType | null>(null)
 
 const API_URL = import.meta.env.VITE_API_URL || ''
-const WS_URL = import.meta.env.VITE_WS_URL || `ws://${window.location.host}`
 
-// Check if we're in demo mode (Vercel deployment without WebSocket support)
+// Construct WebSocket URL based on current protocol (ws for http, wss for https)
+const getWsUrl = () => {
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL
+  }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}`
+}
+const WS_URL = getWsUrl()
+
+// Check if we're in demo mode (serverless deployment without WebSocket support)
 const isDemoMode = () => {
-  // If we're on Vercel or no WS URL is configured for local backend, use polling
+  // If explicitly set, use that
+  if (import.meta.env.VITE_DEMO_MODE === 'true') return true
+  if (import.meta.env.VITE_DEMO_MODE === 'false') return false
+  
+  // Cloud Run supports WebSocket, so we can use it
   const hostname = window.location.hostname
-  return hostname.includes('vercel.app') || hostname.includes('netlify.app') || import.meta.env.VITE_DEMO_MODE === 'true'
+  // Only use polling for platforms that don't support WebSocket
+  return hostname.includes('vercel.app') || hostname.includes('netlify.app')
 }
 
 export function VitalsProvider({ children }: { children: ReactNode }) {
@@ -47,10 +61,11 @@ export function VitalsProvider({ children }: { children: ReactNode }) {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval>>()
 
-  // HTTP Polling mode for Vercel (no WebSocket support)
+  // HTTP Polling mode for demo/fallback
   const pollVitals = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/vitals/current`, {
+      // Use demo endpoint (no auth required) for polling mode
+      const response = await axios.get(`${API_URL}/api/demo/vitals/current`, {
         params: { patient_id: patientId }
       })
       const vitals: VitalSigns = response.data

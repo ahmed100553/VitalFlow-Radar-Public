@@ -1,0 +1,89 @@
+# VitalFlow-Radar: Google Cloud Ignore File
+# Files and directories to exclude from Cloud Build uploads
+
+# Git
+.git/
+.gitignore
+
+# Node.js
+node_modules/
+frontend/node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*credentials*.json
+*service-account*.json
+*.pem
+*.key
+
+# Data files (too large for Cloud Build)
+Rawdata/
+Heart Rate & Breathing Rate/
+*.csv
+logs/
+*.log
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Testing
+tests/
+__tests__/
+*.test.*
+*.spec.*
+coverage/
+.coverage
+
+# Build artifacts
+dist/
+build/
+frontend/dist/
+*.egg-info/
+
+# Vercel (deprecated)
+vercel.json
+.vercel/
+
+# Docker (using Dockerfile.cloudrun instead)
+docker-compose.yml
+docker/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Images and large assets in docs
+imgs/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+
+# Workspace files
+*.code-workspace

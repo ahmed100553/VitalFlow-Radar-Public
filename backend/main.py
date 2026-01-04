@@ -467,16 +467,19 @@ class KafkaService:
             logger.error(f"Failed to produce anomaly: {e}")
             return False
     
-    def get_status(self) -> dict:
+    def get_status(self, include_sensitive: bool = False) -> dict:
         """Get Kafka connection status."""
-        return {
+        status = {
             'available': KAFKA_AVAILABLE,
             'connected': self.is_connected,
             'is_confluent_cloud': is_confluent_cloud() if KAFKA_AVAILABLE else False,
-            'bootstrap_servers': get_bootstrap_servers() if KAFKA_AVAILABLE else None,
-            'last_error': self.last_error,
+            'last_error': self.last_error if not self.is_connected else None,
             'stats': self._delivery_stats
         }
+        # Only include sensitive info for internal use, not public API
+        if include_sensitive:
+            status['bootstrap_servers'] = get_bootstrap_servers() if KAFKA_AVAILABLE else None
+        return status
 
 kafka_service = KafkaService()
 
@@ -877,20 +880,23 @@ class VertexAIService:
             'model_used': 'rule-based'
         }
     
-    def get_status(self) -> dict:
+    def get_status(self, include_sensitive: bool = False) -> dict:
         """Get Vertex AI status."""
-        return {
+        status = {
             'available': VERTEX_AI_AVAILABLE,
             'gemini_available': GEMINI_AVAILABLE,
             'initialized': self.is_initialized,
-            'project_id': settings.GOOGLE_CLOUD_PROJECT or None,
-            'location': settings.VERTEX_AI_LOCATION,
-            'last_error': self.last_error,
+            'last_error': self.last_error if not self.is_initialized else None,
             'stats': {
                 'anomalies_detected': self._anomaly_count,
                 'summaries_generated': self._summary_count
             }
         }
+        # Only include sensitive info for internal use, not public API
+        if include_sensitive:
+            status['project_id'] = settings.GOOGLE_CLOUD_PROJECT or None
+            status['location'] = settings.VERTEX_AI_LOCATION
+        return status
 
 vertex_ai_service = VertexAIService()
 
@@ -996,17 +1002,20 @@ class RadarService:
         
         return None
     
-    def get_status(self) -> dict:
+    def get_status(self, include_sensitive: bool = False) -> dict:
         """Get current radar status."""
-        return {
+        status = {
             'driver_available': RADAR_AVAILABLE,
             'processor_available': PROCESSOR_AVAILABLE,
             'sensor_detected': self.detect_sensor() if RADAR_AVAILABLE else False,
             'is_connected': self.is_connected,
-            'last_error': self.last_error,
-            'cli_port': settings.RADAR_CLI_PORT,
-            'data_port': settings.RADAR_DATA_PORT
+            'last_error': self.last_error if not self.is_connected else None
         }
+        # Only include sensitive info for internal use, not public API
+        if include_sensitive:
+            status['cli_port'] = settings.RADAR_CLI_PORT
+            status['data_port'] = settings.RADAR_DATA_PORT
+        return status
 
 radar_service = RadarService()
 
@@ -1638,6 +1647,41 @@ async def inject_demo_vitals(data: DemoVitalSigns):
     }
 
 
+@app.get("/api/demo/vitals/current")
+async def get_demo_current_vitals(patient_id: str = "default"):
+    """
+    Get current vital signs for demo (no auth required).
+    
+    This endpoint allows hackathon judges to view vital signs without logging in.
+    Use with the /api/demo/vitals POST endpoint to inject test data.
+    """
+    if patient_id not in vital_service.current_data:
+        # Return calibrating state if no data yet
+        return {
+            "patient_id": patient_id,
+            "heart_rate": 0,
+            "heart_rate_confidence": 0,
+            "breathing_rate": 0,
+            "breathing_rate_confidence": 0,
+            "status": "calibrating",
+            "timestamp": time.time(),
+            "alerts": []
+        }
+    
+    return vital_service.current_data[patient_id].dict()
+
+
+@app.get("/api/demo/vitals/history")
+async def get_demo_vitals_history(patient_id: str = "default", duration: int = 60):
+    """
+    Get vital signs history for demo (no auth required).
+    """
+    if patient_id in vital_service.data_buffer:
+        data = list(vital_service.data_buffer[patient_id])
+        cutoff = time.time() - (duration * 60)
+        return [d for d in data if d['timestamp'] >= cutoff]
+    return []
+
 @app.get("/api/demo/scenarios")
 async def get_demo_scenarios():
     """List available demo scenarios for testing."""
@@ -2103,14 +2147,66 @@ async def websocket_endpoint(websocket: WebSocket, patient_id: str):
         manager.disconnect(websocket, patient_id)
 
 # ============================================================================
+# STATIC FILES (for Cloud Run / production deployment)
+# ============================================================================
+
+# Check if static files exist (built frontend)
+STATIC_DIR = Path(__file__).parent.parent / "static"
+if not STATIC_DIR.exists():
+    # Try alternative location (same directory as backend)
+    STATIC_DIR = Path(__file__).parent / "static"
+if not STATIC_DIR.exists():
+    # Try frontend/dist (development)
+    STATIC_DIR = Path(__file__).parent.parent / "frontend" / "dist"
+
+if STATIC_DIR.exists():
+    from fastapi.responses import FileResponse
+    
+    # Serve static assets
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="static-assets")
+    
+    # Catch-all for SPA routing - serve index.html for non-API routes
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve the React SPA for all non-API routes."""
+        # Don't intercept API, WebSocket, or docs routes
+        if full_path.startswith(("api/", "ws/", "docs", "redoc", "openapi.json")):
+            raise HTTPException(status_code=404)
+        
+        # Check for static file
+        file_path = STATIC_DIR / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        
+        # Return index.html for SPA routing
+        index_path = STATIC_DIR / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+        
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    logger.info(f"Static files enabled from: {STATIC_DIR}")
+else:
+    logger.warning("No static files directory found - frontend will not be served")
+
+# ============================================================================
 # MAIN
 # ============================================================================
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
+    
+    parser = argparse.ArgumentParser(description="VitalFlow-Radar API Server")
+    parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)), 
+                        help="Port to bind to (default: 8000, or PORT env var)")
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
+    args = parser.parse_args()
+    
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
+        host=args.host,
+        port=args.port,
+        reload=args.reload
     )

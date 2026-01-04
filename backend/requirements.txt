@@ -38,6 +38,9 @@ httpx>=0.26.0
 # Production
 gunicorn>=21.0.0
 
-# Optional: Cloud Integration
-# google-cloud-aiplatform>=1.38.0
-# vertexai>=1.38.0
+# Cloud Integration - Confluent Kafka
+confluent-kafka>=2.3.0
+
+# Cloud Integration - Google Cloud / Vertex AI
+google-cloud-aiplatform>=1.38.0
+vertexai>=1.38.0
