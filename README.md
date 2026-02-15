@@ -408,7 +408,7 @@ python scripts/traffic_generator.py --scenario normal
 
 ## 🎥 Video Demo
 
-[Watch the 3-minute demo walkthrough](#) *(link to be added)*
+[Watch my demo for AI Partner Catalyst](https://www.youtube.com/watch?v=wP1_eyVGeQI)
 
 ---
 
